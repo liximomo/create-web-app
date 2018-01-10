@@ -1,6 +1,5 @@
 async function foo() {
-  console.log(1);
-  console.log(3);
+  console.log(13);
 }
 
 foo();

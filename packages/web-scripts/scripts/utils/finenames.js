@@ -1,5 +1,5 @@
 const path = require('path');
-const paths = require('../config/paths');
+const paths = require('../../config/paths');
 
 function getJsFileName(entryFile) {
   const basename = path.basename(entryFile);
@@ -7,7 +7,8 @@ function getJsFileName(entryFile) {
 }
 
 function getCssFilename(bundleName = 'style') {
-  return `static/css/${bundleName}.[contenthash:8].css`;
+  // vscode syntax error with template string
+  return 'static/css/${bundleName}.[contenthash:8]' + 'css';
 }
 
 function getHtmlTemplatePath(entryFile) {

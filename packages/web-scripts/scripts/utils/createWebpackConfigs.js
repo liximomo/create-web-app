@@ -2,8 +2,6 @@ const glob = require('glob');
 const path = require('path');
 const fs = require('fs');
 
-const paths = require('../config/paths');
-const filenames = require('../config/filenames');
 const merge = require('webpack-merge');
 
 const defaultOption = {
@@ -20,11 +18,6 @@ function isFileExist(filepath) {
     isExist = false;
   }
   return isExist;
-}
-
-function getEntryFiles(globPattern) {
-  const entryFiles = glob.sync(globPattern);
-  return entryFiles;
 }
 
 function getCustomConfigPath(entryFile) {
@@ -79,13 +72,13 @@ function createGlobPattern(files, base = '') {
     : `${base}/${withPatterns}`;
 }
 
-function createWebpackConfigs(files = '*', option = {}) {
+function createWebpackConfigs(file, option = {}) {
+  const entryFiles = [].concat(file);
   const widthDefault = Object.assign({}, defaultOption, option);
-  const pattern = createGlobPattern([].concat(files), paths.appSrc);
-  const entryFiles = getEntryFiles(pattern);
-  if (option.multi) {
+  if (entryFiles.length > 1 && option.multi) {
     return entryFiles.map(entryFile => createConfig(entryFile, widthDefault));
   }
+
   return createConfig(entryFiles[0], widthDefault);
 }
 

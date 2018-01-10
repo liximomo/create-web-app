@@ -7,6 +7,7 @@ const merge = require('webpack-merge');
 const defaultOption = {
   multi: false,
   configPath: 'webpack.config.js',
+  config: undefined,
 };
 
 function isFileExist(filepath) {
@@ -35,7 +36,7 @@ function getConfig(entryFile, filepath) {
 }
 
 function composeConfig(entryFile, option) {
-  const baseConfig = getConfig(entryFile, option.configPath)
+  const baseConfig = option.config || getConfig(entryFile, option.configPath)
 
   const customConfigPath = getCustomConfigPath(entryFile);
   let customConfig;

@@ -7,11 +7,11 @@ const filenames = require('./utils/finenames');
 const fileResolver = require('./utils/fileResolver');
 const packageInfo = require('../package.json');
 const webpackConfigPath = paths.scriptVersion + '/config/webpack.config.dev';
-const HtmlWebpackPluginPath = paths.scriptVersion + '/node_modules/html-webpack-plugin';
 
 // load original configs
 const webpackConfig = require(webpackConfigPath);
-const HtmlWebpackPlugin = require(HtmlWebpackPluginPath);
+const HtmlWebpackPlugin = require('html-webpack-plugin');
+const HtmlWebpackHarddiskPlugin = require('html-webpack-harddisk-plugin');
 
 let entryIndex;
 const args = process.argv.slice(2);
@@ -29,26 +29,29 @@ const entry = webpackConfig.entry.slice(0, webpackConfig.entry.length - 1);
 entry.push(entryIndex);
 
 const plugins = webpackConfig.plugins.map(plugin => {
-  if (plugin.constructor.name === 'HtmlWebpackPlugin') {
-    const htmlTemplate = filenames.getHtmlTemplatePath(entryIndex);
-
-    return new HtmlWebpackPlugin({
-      inject: true,
-      template: htmlTemplate,
-    });
+  switch (plugin.constructor ? plugin.constructor.name : undefined) {
+    case 'HtmlWebpackPlugin':
+      const htmlTemplate = filenames.getHtmlTemplatePath(entryIndex);
+      return new HtmlWebpackPlugin({
+        inject: true,
+        template: htmlTemplate,
+        alwaysWriteToDisk: true
+      });
+    default:
+      break;
   }
 
   return plugin;
 });
+plugins.push(new HtmlWebpackHarddiskPlugin());
+
 
 // override config in memory
-require.cache[require.resolve(webpackConfigPath)].exports = Object.assign(webpackConfig, {
-  entry,
-  plugins,
-});
-
 require.cache[require.resolve(webpackConfigPath)].exports = createWebpackConfigs(entryIndex, {
-  configPath: webpackConfigPath,
+  config: Object.assign({}, webpackConfig, {
+    entry,
+    plugins,
+  }),
 });
 
 // run original script

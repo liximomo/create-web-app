@@ -6,50 +6,66 @@ const paths = require('./utils/paths');
 const filenames = require('./utils/finenames');
 const fileResolver = require('./utils/fileResolver');
 const packageInfo = require('../package.json');
-const webpackConfigPath = paths.scriptVersion + '/config/webpack.config.dev';
-const HtmlWebpackPluginPath = paths.scriptVersion + '/node_modules/html-webpack-plugin';
+const webpackConfigPath = paths.scriptVersion + '/config/webpack.config.prod';
 
 // load original configs
 const webpackConfig = require(webpackConfigPath);
-const HtmlWebpackPlugin = require(HtmlWebpackPluginPath);
+const HtmlWebpackPlugin = require('html-webpack-plugin');
+const ExtractTextPlugin = require('extract-text-webpack-plugin');
 
-let entryIndex;
+let file;
 const args = process.argv.slice(2);
 
 if (args.length < 1) {
   // forward to react-scripts
-  entryIndex = paths.appIndexJs;
+  file = paths.appIndexJs;
 } else {
-  const file = args[0];
-  const entryFiles = fileResolver(file, paths.appSrc);
-  entryIndex = entryFiles[0];
+  file = fileResolver(args, paths.appSrc);
+  if (file.length === 1) {
+    file = file[0];
+  }
 }
 
-const entry = webpackConfig.entry.slice(0, webpackConfig.entry.length - 1);
-entry.push(entryIndex);
+function hackConfig(entryFile, config) {
+  const entry = webpackConfig.entry.slice(0, webpackConfig.entry.length - 1);
+  entry.push(entryFile);
 
-const plugins = webpackConfig.plugins.map(plugin => {
-  if (plugin.constructor.name === 'HtmlWebpackPlugin') {
-    const htmlTemplate = filenames.getHtmlTemplatePath(entryIndex);
+  const output = Object.assign({}, webpackConfig.output, {
+    filename: filenames.getJsFileName(entryFile),
+  });
 
-    return new HtmlWebpackPlugin({
-      inject: true,
-      template: htmlTemplate,
-    });
-  }
+  const plugins = webpackConfig.plugins.map(plugin => {
+    switch (plugin.constructor ? plugin.constructor.name : undefined) {
+      case 'HtmlWebpackPlugin':
+        const htmlTemplate = filenames.getHtmlTemplatePath(entryFile);
+        return new HtmlWebpackPlugin({
+          inject: true,
+          template: htmlTemplate,
+        });
+      case 'ExtractTextPlugin':
+        return new ExtractTextPlugin({
+          filename: filenames.getCssFilename(entryFile),
+        });
+      default:
+        break;
+    }
 
-  return plugin;
-});
+    return plugin;
+  });
+
+  return createWebpackConfigs(entryFile, {
+    config: Object.assign(webpackConfig, {
+      output,
+      entry,
+      plugins,
+    }),
+  });
+}
 
 // override config in memory
-require.cache[require.resolve(webpackConfigPath)].exports = Object.assign(webpackConfig, {
-  entry,
-  plugins,
-});
-
-require.cache[require.resolve(webpackConfigPath)].exports = createWebpackConfigs(entryIndex, {
-  configPath: webpackConfigPath,
-});
+require.cache[require.resolve(webpackConfigPath)].exports = Array.isArray(file)
+  ? file.map(entry => hackConfig(entry, webpackConfig))
+  : hackConfig(file, webpackConfig);
 
 // run original script
-require(paths.scriptVersion + '/scripts/start');
+require(paths.scriptVersion + '/scripts/build');

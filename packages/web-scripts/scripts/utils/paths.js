@@ -1,4 +1,4 @@
-// from https://github.com/timarney/react-app-rewired/blob/master/packages/react-app-rewired/scripts/utils/paths.js
+// modifiled from https://github.com/timarney/react-app-rewired/blob/master/packages/react-app-rewired/scripts/utils/paths.js
 var path = require('path');
 var fs = require('fs');
 
@@ -15,12 +15,9 @@ const modulePath = path.join(
   require.resolve(`${scriptVersion}/package.json`),
   '..'
 );
-const projectDir = path.resolve(fs.realpathSync(process.cwd()));
-
 const paths = require(modulePath + '/config/paths');
 
 module.exports = Object.assign({
   scriptVersion: modulePath,
-  configOverrides: projectDir + '/config-overrides',
   customScriptsIndex: (custom_scripts ? cs_index : -1)
 }, paths);

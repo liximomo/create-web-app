@@ -1,6 +1,7 @@
 process.env.BABEL_ENV = 'development';
 process.env.NODE_ENV = 'development';
 
+const dotProp = require('dot-prop-immutable');
 const createWebpackConfigs = require('./utils/createWebpackConfigs');
 const paths = require('./utils/paths');
 const filenames = require('./utils/finenames');
@@ -11,7 +12,6 @@ const webpackConfigPath = paths.scriptVersion + '/config/webpack.config.dev';
 // load original configs
 const webpackConfig = require(webpackConfigPath);
 const HtmlWebpackPlugin = require('html-webpack-plugin');
-const HtmlWebpackHarddiskPlugin = require('html-webpack-harddisk-plugin');
 
 let entryIndex;
 const args = process.argv.slice(2);
@@ -25,33 +25,51 @@ if (args.length < 1) {
   entryIndex = entryFiles[0];
 }
 
-const entry = webpackConfig.entry.slice(0, webpackConfig.entry.length - 1);
-entry.push(entryIndex);
+const htmlTemplate = filenames.getHtmlTemplatePath(entryIndex);
 
-const plugins = webpackConfig.plugins.map(plugin => {
-  switch (plugin.constructor ? plugin.constructor.name : undefined) {
-    case 'HtmlWebpackPlugin':
-      const htmlTemplate = filenames.getHtmlTemplatePath(entryIndex);
-      return new HtmlWebpackPlugin({
-        inject: true,
-        template: htmlTemplate,
-        alwaysWriteToDisk: true
-      });
-    default:
-      break;
-  }
-
-  return plugin;
+const hackEntry = dotProp.set(webpackConfig, 'entry', entry => {
+  const stripOriginIndexJs = entry.slice(0, entry.length - 1);
+  stripOriginIndexJs.push(entryIndex);
+  stripOriginIndexJs.push(htmlTemplate);
+  return stripOriginIndexJs;
 });
-plugins.push(new HtmlWebpackHarddiskPlugin());
 
+const hackLoader = dotProp.set(hackEntry, 'module.rules.1.oneOf', loaders => {
+  const preLoaders = loaders.slice(0, loaders.length - 1);
+  preLoaders.push({
+    test: /\.(html)$/,
+    use: {
+      loader: require.resolve('html-loader'),
+      options: {
+        attrs: ['img:src'],
+        minimize: false,
+      },
+    },
+  });
+
+  preLoaders.push(loaders.pop());
+  return preLoaders;
+});
+
+const hackPlugins = dotProp.set(hackLoader, 'plugins', plugins => {
+  return plugins.map(plugin => {
+    switch (plugin.constructor ? plugin.constructor.name : undefined) {
+      case 'HtmlWebpackPlugin':
+        return new HtmlWebpackPlugin({
+          inject: true,
+          template: htmlTemplate,
+        });
+      default:
+        break;
+    }
+  
+    return plugin;
+  });
+});
 
 // override config in memory
 require.cache[require.resolve(webpackConfigPath)].exports = createWebpackConfigs(entryIndex, {
-  config: Object.assign({}, webpackConfig, {
-    entry,
-    plugins,
-  }),
+  config: hackPlugins,
 });
 
 // run original script

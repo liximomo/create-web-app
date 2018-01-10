@@ -19,8 +19,10 @@
   },
   "dependencies": {
     "cross-spawn": "^5.1.0",
+    "dot-prop-immutable": "^1.4.0",
     "glob": "^7.1.2",
-    "html-webpack-harddisk-plugin": "^0.1.0",
+    "html-loader": "^0.5.4",
+    "react-scripts": "^1.0.17",
     "webpack-merge": "^4.1.1"
   }
 }

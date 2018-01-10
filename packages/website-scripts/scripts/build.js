@@ -22,9 +22,12 @@ if (args.length < 1) {
   file = paths.appIndexJs;
 } else {
   file = fileResolver(args, paths.appSrc);
-  if (file.length === 1) {
-    file = file[0];
+  if (!file.length > 0) {
+    console.log("can't resolve to a file from " + args);
+    process.exit(-1);
   }
+  // current only support build one file per run
+  file = file[0];
 }
 
 function hackConfig(entryFile, config) {
@@ -37,7 +40,7 @@ function hackConfig(entryFile, config) {
     return stripOriginIndexJs;
   });
 
-  const hackOutput = dotProp.set(webpackConfig, 'output', output => {
+  const hackOutput = dotProp.set(hackEntry, 'output', output => {
     return dotProp.set(output, 'filename', filenames.getJsFileName(entryFile));
   });
 

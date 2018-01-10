@@ -13,23 +13,23 @@ const webpackConfigPath = paths.scriptVersion + '/config/webpack.config.dev';
 const webpackConfig = require(webpackConfigPath);
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 
-let entryIndex;
+let entryFile;
 const args = process.argv.slice(2);
 
 if (args.length < 1) {
   // forward to react-scripts
-  entryIndex = paths.appIndexJs;
+  entryFile = paths.appIndexJs;
 } else {
   const file = args[0];
   const entryFiles = fileResolver(file, paths.appSrc);
-  entryIndex = entryFiles[0];
+  entryFile = entryFiles[0];
 }
 
-const htmlTemplate = filenames.getHtmlTemplatePath(entryIndex);
+const htmlTemplate = filenames.getHtmlTemplatePath(entryFile);
 
 const hackEntry = dotProp.set(webpackConfig, 'entry', entry => {
   const stripOriginIndexJs = entry.slice(0, entry.length - 1);
-  stripOriginIndexJs.push(entryIndex);
+  stripOriginIndexJs.push(entryFile);
   stripOriginIndexJs.push(htmlTemplate);
   return stripOriginIndexJs;
 });
@@ -41,6 +41,7 @@ const hackLoader = dotProp.set(hackEntry, 'module.rules.1.oneOf', loaders => {
     use: {
       loader: require.resolve('html-loader'),
       options: {
+        interpolate: 'require',
         attrs: ['img:src'],
         minimize: false,
       },
@@ -68,7 +69,7 @@ const hackPlugins = dotProp.set(hackLoader, 'plugins', plugins => {
 });
 
 // override config in memory
-require.cache[require.resolve(webpackConfigPath)].exports = createWebpackConfigs(entryIndex, {
+require.cache[require.resolve(webpackConfigPath)].exports = createWebpackConfigs(entryFile, {
   config: hackPlugins,
 });
 

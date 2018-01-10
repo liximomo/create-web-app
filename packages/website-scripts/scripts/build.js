@@ -1,6 +1,7 @@
 process.env.BABEL_ENV = 'production';
 process.env.NODE_ENV = 'production';
 
+const dotProp = require('dot-prop-immutable');
 const createWebpackConfigs = require('./utils/createWebpackConfigs');
 const paths = require('./utils/paths');
 const filenames = require('./utils/finenames');
@@ -27,38 +28,59 @@ if (args.length < 1) {
 }
 
 function hackConfig(entryFile, config) {
-  const entry = webpackConfig.entry.slice(0, webpackConfig.entry.length - 1);
-  entry.push(entryFile);
+  const htmlTemplate = filenames.getHtmlTemplatePath(entryFile);
 
-  const output = Object.assign({}, webpackConfig.output, {
-    filename: filenames.getJsFileName(entryFile),
+  const hackEntry = dotProp.set(webpackConfig, 'entry', entry => {
+    const stripOriginIndexJs = entry.slice(0, entry.length - 1);
+    stripOriginIndexJs.push(entryFile);
+    stripOriginIndexJs.push(htmlTemplate);
+    return stripOriginIndexJs;
   });
 
-  const plugins = webpackConfig.plugins.map(plugin => {
-    switch (plugin.constructor ? plugin.constructor.name : undefined) {
-      case 'HtmlWebpackPlugin':
-        const htmlTemplate = filenames.getHtmlTemplatePath(entryFile);
-        return new HtmlWebpackPlugin({
-          inject: true,
-          template: htmlTemplate,
-        });
-      case 'ExtractTextPlugin':
-        return new ExtractTextPlugin({
-          filename: filenames.getCssFilename(entryFile),
-        });
-      default:
-        break;
-    }
+  const hackOutput = dotProp.set(webpackConfig, 'output', output => {
+    return dotProp.set(output, 'filename', filenames.getJsFileName(entryFile));
+  });
 
-    return plugin;
+  const hackLoader = dotProp.set(hackOutput, 'module.rules.1.oneOf', loaders => {
+    const preLoaders = loaders.slice(0, loaders.length - 1);
+    preLoaders.push({
+      test: /\.(html)$/,
+      use: {
+        loader: require.resolve('html-loader'),
+        options: {
+          interpolate: 'require',
+          attrs: ['img:src'],
+          minimize: false,
+        },
+      },
+    });
+
+    preLoaders.push(loaders.pop());
+    return preLoaders;
+  });
+
+  const hackPlugins = dotProp.set(hackLoader, 'plugins', plugins => {
+    return plugins.map(plugin => {
+      switch (plugin.constructor ? plugin.constructor.name : undefined) {
+        case 'HtmlWebpackPlugin':
+          return new HtmlWebpackPlugin({
+            inject: true,
+            template: htmlTemplate,
+          });
+        case 'ExtractTextPlugin':
+          return new ExtractTextPlugin({
+            filename: filenames.getCssFilename(entryFile),
+          });
+        default:
+          break;
+      }
+  
+      return plugin;
+    });
   });
 
   return createWebpackConfigs(entryFile, {
-    config: Object.assign(webpackConfig, {
-      output,
-      entry,
-      plugins,
-    }),
+    config: hackPlugins,
   });
 }
 

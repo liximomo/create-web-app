@@ -12,7 +12,7 @@
     "scripts"
   ],
   "bin": {
-    "web-scripts": "./bin/website-scripts.js"
+    "website-scripts": "./bin/website-scripts.js"
   },
   "peerDependencies": {
     "react-scripts": "^1.0.17"

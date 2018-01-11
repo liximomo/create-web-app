@@ -1,96 +1,176 @@
+// @remove-on-eject-begin
+/**
+ * Copyright (c) 2015-present, Facebook, Inc.
+ * Copyright (c) 2018-present, liximomo.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+// @remove-on-eject-end
+'use strict';
+
+// Do this as the first thing so that any code reading it knows the right env.
 process.env.BABEL_ENV = 'production';
 process.env.NODE_ENV = 'production';
 
-const dotProp = require('dot-prop-immutable');
+// Makes the script crash on unhandled rejections instead of silently
+// ignoring them. In the future, promise rejections that are not handled will
+// terminate the Node.js process with a non-zero exit code.
+process.on('unhandledRejection', err => {
+  throw err;
+});
+
+// Ensure environment variables are read.
+require('../config/env');
+
+const path = require('path');
+const chalk = require('chalk');
+const fs = require('fs-extra');
+const webpack = require('webpack');
+const paths = require('../config/paths');
+const formatWebpackMessages = require('react-dev-utils/formatWebpackMessages');
+const printHostingInstructions = require('react-dev-utils/printHostingInstructions');
+const FileSizeReporter = require('react-dev-utils/FileSizeReporter');
+const printBuildError = require('react-dev-utils/printBuildError');
 const createWebpackConfigs = require('./utils/createWebpackConfigs');
-const paths = require('./utils/paths');
-const filenames = require('./utils/finenames');
 const fileResolver = require('./utils/fileResolver');
-const packageInfo = require('../package.json');
-const webpackConfigPath = paths.scriptVersion + '/config/webpack.config.prod';
 
-// load original configs
-const webpackConfig = require(webpackConfigPath);
-const HtmlWebpackPlugin = require('html-webpack-plugin');
-const ExtractTextPlugin = require('extract-text-webpack-plugin');
+const webpackConfigPath = path.resolve(__dirname, '../config/webpack.config.prod.js');
 
-let file;
+let entryFile;
 const args = process.argv.slice(2);
 
 if (args.length < 1) {
   // forward to react-scripts
-  file = paths.appIndexJs;
+  entryFile = paths.appIndexJs;
 } else {
-  file = fileResolver(args, paths.appSrc);
-  if (!file.length > 0) {
+  const file = args[0];
+  const entryFiles = fileResolver(file, paths.appSrc);
+  if (!entryFiles.length > 0) {
     console.log("can't resolve to a file from " + args);
     process.exit(-1);
   }
-  // current only support build one file per run
-  file = file[0];
+  entryFile = entryFiles[0];
 }
 
-function hackConfig(entryFile, config) {
-  const htmlTemplate = filenames.getHtmlTemplatePath(entryFile);
+const config = createWebpackConfigs(entryFile, {
+  configPath: webpackConfigPath
+});
 
-  const hackEntry = dotProp.set(webpackConfig, 'entry', entry => {
-    const stripOriginIndexJs = entry.slice(0, entry.length - 1);
-    stripOriginIndexJs.push(entryFile);
-    stripOriginIndexJs.push(htmlTemplate);
-    return stripOriginIndexJs;
-  });
+const measureFileSizesBeforeBuild =
+  FileSizeReporter.measureFileSizesBeforeBuild;
+const printFileSizesAfterBuild = FileSizeReporter.printFileSizesAfterBuild;
+const useYarn = fs.existsSync(paths.yarnLockFile);
 
-  const hackOutput = dotProp.set(hackEntry, 'output', output => {
-    return dotProp.set(output, 'filename', filenames.getJsFileName(entryFile));
-  });
+// These sizes are pretty large. We'll warn for bundles exceeding them.
+const WARN_AFTER_BUNDLE_GZIP_SIZE = 512 * 1024;
+const WARN_AFTER_CHUNK_GZIP_SIZE = 1024 * 1024;
 
-  const hackLoader = dotProp.set(hackOutput, 'module.rules.1.oneOf', loaders => {
-    const preLoaders = loaders.slice(0, loaders.length - 1);
-    preLoaders.push({
-      test: /\.(html)$/,
-      use: {
-        loader: require.resolve('html-loader'),
-        options: {
-          interpolate: 'require',
-          attrs: ['img:src'],
-          minimize: false,
-        },
-      },
-    });
-
-    preLoaders.push(loaders.pop());
-    return preLoaders;
-  });
-
-  const hackPlugins = dotProp.set(hackLoader, 'plugins', plugins => {
-    return plugins.map(plugin => {
-      switch (plugin.constructor ? plugin.constructor.name : undefined) {
-        case 'HtmlWebpackPlugin':
-          return new HtmlWebpackPlugin({
-            inject: true,
-            template: htmlTemplate,
-          });
-        case 'ExtractTextPlugin':
-          return new ExtractTextPlugin({
-            filename: filenames.getCssFilename(entryFile),
-          });
-        default:
-          break;
+// First, read the current file sizes in build directory.
+// This lets us display how much they changed later.
+measureFileSizesBeforeBuild(paths.appBuild)
+  .then(previousFileSizes => {
+    // Remove all content but keep the directory so that
+    // if you're in it, you don't end up in Trash
+    fs.emptyDirSync(paths.appBuild);
+    // Merge with the public folder
+    copyPublicFolder();
+    // Start the webpack build
+    return build(previousFileSizes);
+  })
+  .then(
+    ({ stats, previousFileSizes, warnings }) => {
+      if (warnings.length) {
+        console.log(chalk.yellow('Compiled with warnings.\n'));
+        console.log(warnings.join('\n\n'));
+        console.log(
+          '\nSearch for the ' +
+            chalk.underline(chalk.yellow('keywords')) +
+            ' to learn more about each warning.'
+        );
+        console.log(
+          'To ignore, add ' +
+            chalk.cyan('// eslint-disable-next-line') +
+            ' to the line before.\n'
+        );
+      } else {
+        console.log(chalk.green('Compiled successfully.\n'));
       }
-  
-      return plugin;
-    });
-  });
 
-  return createWebpackConfigs(entryFile, {
-    config: hackPlugins,
+      console.log('File sizes after gzip:\n');
+      printFileSizesAfterBuild(
+        stats,
+        previousFileSizes,
+        paths.appBuild,
+        WARN_AFTER_BUNDLE_GZIP_SIZE,
+        WARN_AFTER_CHUNK_GZIP_SIZE
+      );
+      console.log();
+
+      const appPackage = require(paths.appPackageJson);
+      const publicUrl = paths.publicUrl;
+      const publicPath = config.output.publicPath;
+      const buildFolder = path.relative(process.cwd(), paths.appBuild);
+      printHostingInstructions(
+        appPackage,
+        publicUrl,
+        publicPath,
+        buildFolder,
+        useYarn
+      );
+    },
+    err => {
+      console.log(chalk.red('Failed to compile.\n'));
+      printBuildError(err);
+      process.exit(1);
+    }
+  );
+
+// Create the production build and print the deployment instructions.
+function build(previousFileSizes) {
+  console.log('Creating an optimized production build...');
+
+  let compiler = webpack(config);
+  return new Promise((resolve, reject) => {
+    compiler.run((err, stats) => {
+      if (err) {
+        return reject(err);
+      }
+      const messages = formatWebpackMessages(stats.toJson({}, true));
+      if (messages.errors.length) {
+        // Only keep the first error. Others are often indicative
+        // of the same problem, but confuse the reader with noise.
+        if (messages.errors.length > 1) {
+          messages.errors.length = 1;
+        }
+        return reject(new Error(messages.errors.join('\n\n')));
+      }
+      if (
+        process.env.CI &&
+        (typeof process.env.CI !== 'string' ||
+          process.env.CI.toLowerCase() !== 'false') &&
+        messages.warnings.length
+      ) {
+        console.log(
+          chalk.yellow(
+            '\nTreating warnings as errors because process.env.CI = true.\n' +
+              'Most CI servers set it automatically.\n'
+          )
+        );
+        return reject(new Error(messages.warnings.join('\n\n')));
+      }
+      return resolve({
+        stats,
+        previousFileSizes,
+        warnings: messages.warnings,
+      });
+    });
   });
 }
 
-// override config in memory
-require.cache[require.resolve(webpackConfigPath)].exports = Array.isArray(file)
-  ? file.map(entry => hackConfig(entry, webpackConfig))
-  : hackConfig(file, webpackConfig);
-
-// run original script
-require(paths.scriptVersion + '/scripts/build');
+function copyPublicFolder() {
+  fs.copySync(paths.appPublic, paths.appBuild, {
+    dereference: true,
+    filter: file => file !== paths.appHtml,
+  });
+}

@@ -1,7 +1,6 @@
 // @remove-on-eject-begin
 /**
  * Copyright (c) 2015-present, Facebook, Inc.
- * Copyright (c) 2018-present, liximomo.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -35,9 +34,8 @@ const env = getClientEnvironment(publicUrl);
 // This is the development configuration.
 // It is focused on developer experience and fast rebuilds.
 // The production configuration is different and lives in a separate file.
-module.exports = function(entryFile, context) {
-  const bundleName =filenames.getJsFileName(entryFile);
-  const cssFileName = filenames.getCssFilename(bundleName);
+module.exports = (entryFile, context) => {
+  const bundleName =filenames.getBundleName(entryFile);
   const htmlTemplate = filenames.getHtmlTemplatePath(entryFile);
 
   return {
@@ -62,10 +60,11 @@ module.exports = function(entryFile, context) {
       // require.resolve('webpack/hot/dev-server'),
       require.resolve('react-dev-utils/webpackHotDevClient'),
       // Finally, this is your app's code:
-      entryFile
+      entryFile,
       // We include the app code last so that if there is a runtime error during
       // initialization, it doesn't blow up the WebpackDevServer client, and
       // changing JS code would still trigger a refresh.
+      htmlTemplate,
     ],
     output: {
       // Add /* filename */ comments to generated require()s in the output.
@@ -171,6 +170,13 @@ module.exports = function(entryFile, context) {
               include: paths.appSrc,
               loader: require.resolve('babel-loader'),
               options: {
+                // @remove-on-eject-begin
+                babelrc: false,
+                presets: [require.resolve('babel-preset-react-app')],
+                // @remove-on-eject-end
+                // This is a feature of `babel-loader` for webpack (not Babel itself).
+                // It enables caching results in ./node_modules/.cache/babel-loader/
+                // directory for faster rebuilds.
                 cacheDirectory: true,
               },
             },
@@ -210,6 +216,17 @@ module.exports = function(entryFile, context) {
                   },
                 },
               ],
+            },
+            {
+              test: /\.(html)$/,
+              use: {
+                loader: require.resolve('html-loader'),
+                options: {
+                  interpolate: 'require',
+                  attrs: ['img:src'],
+                  minimize: false,
+                },
+              },
             },
             // "file" loader makes sure those assets get served by WebpackDevServer.
             // When you `import` an asset, you get its (virtual) filename.

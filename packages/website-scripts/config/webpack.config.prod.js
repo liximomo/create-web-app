@@ -1,3 +1,13 @@
+// @remove-on-eject-begin
+/**
+ * Copyright (c) 2015-present, Facebook, Inc.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+// @remove-on-eject-end
+'use strict';
+
 const autoprefixer = require('autoprefixer');
 const path = require('path');
 const webpack = require('webpack');
@@ -32,23 +42,25 @@ if (env.stringified['process.env'].NODE_ENV !== '"production"') {
   throw new Error('Production builds must have NODE_ENV=production.');
 }
 
-// ExtractTextPlugin expects the build output to be flat.
-// (See https://github.com/webpack-contrib/extract-text-webpack-plugin/issues/27)
-// However, our output is structured with css, js and media folders.
-// To have this structure working with relative paths, we have to use custom options.
-const extractTextPluginOptions = shouldUseRelativeAssetPaths
-  ? // Making sure that the publicPath goes back to to build folder.
-    { publicPath: Array(filenames.getCssFilename().split('/').length).join('../') }
-  : {};
+const shouldHashFilename = process.env.HASH_FILENAME === 'false';
 
 // This is the production configuration.
 // It compiles slowly and is focused on producing a fast and minimal bundle.
 // The development configuration is different and lives in a separate file.
-module.exports = function(entryFile, context) {
-  const bundleName = filenames.getJsFileName(entryFile);
-  const cssFileName = filenames.getCssFilename(bundleName);
-  const htmlFileName = filenames.getHtmlFileName(bundleName);
+module.exports = (entryFile, context) => {
+  const bundleName =filenames.getBundleName(entryFile);
+  const cssFilename = shouldHashFilename ? `static/css/${bundleName}.css` : `static/css/${bundleName}.css`;
   const htmlTemplate = filenames.getHtmlTemplatePath(entryFile);
+
+  // ExtractTextPlugin expects the build output to be flat.
+  // (See https://github.com/webpack-contrib/extract-text-webpack-plugin/issues/27)
+  // However, our output is structured with css, js and media folders.
+  // To have this structure working with relative paths, we have to use custom options.
+  const extractTextPluginOptions = shouldUseRelativeAssetPaths
+  ? // Making sure that the publicPath goes back to to build folder.
+    { publicPath: Array(cssFilename.split('/').length).join('../') }
+  : {};
+
   return {
     // Don't attempt to continue if there are any errors.
     bail: true,
@@ -56,13 +68,14 @@ module.exports = function(entryFile, context) {
     // You can exclude the *.map files from the build during deployment.
     devtool: shouldUseSourceMap ? 'source-map' : false,
     // In production, we only want to load the polyfills and the app code.
-    entry: [require.resolve('./polyfills')],
+    entry: [require.resolve('./polyfills'), entryFile],
     output: {
       // The build folder.
       path: paths.appBuild,
       // Generated JS file names (with nested folders).
       // There will be one main bundle, and one file per asynchronous chunk.
       // We don't currently advertise code splitting but Webpack supports it.
+      filename: shouldHashFilename ? `static/js/${bundleName}.[chunkhash:8].js` : `static/js/${bundleName}.js` ,
       chunkFilename: 'static/js/[name].[chunkhash:8].chunk.js',
       // We inferred the "public path" (such as / or /my-project) from homepage.
       publicPath: publicPath,
@@ -115,6 +128,15 @@ module.exports = function(entryFile, context) {
               options: {
                 formatter: eslintFormatter,
                 eslintPath: require.resolve('eslint'),
+                // @remove-on-eject-begin
+                // TODO: consider separate config for production,
+                // e.g. to enable no-console and no-debugger only in production.
+                baseConfig: {
+                  extends: [require.resolve('eslint-config-react-app')],
+                },
+                ignore: false,
+                useEslintrc: false,
+                // @remove-on-eject-end
               },
               loader: require.resolve('eslint-loader'),
             },
@@ -142,6 +164,10 @@ module.exports = function(entryFile, context) {
               include: paths.appSrc,
               loader: require.resolve('babel-loader'),
               options: {
+                // @remove-on-eject-begin
+                babelrc: false,
+                presets: [require.resolve('babel-preset-react-app')],
+                // @remove-on-eject-end
                 compact: true,
               },
             },
@@ -204,6 +230,17 @@ module.exports = function(entryFile, context) {
               ),
               // Note: this won't work without `new ExtractTextPlugin()` in `plugins`.
             },
+            {
+              test: /\.(html)$/,
+              use: {
+                loader: require.resolve('html-loader'),
+                options: {
+                  interpolate: 'require',
+                  attrs: ['img:src'],
+                  minimize: false,
+                },
+              },
+            },
             // "file" loader makes sure assets end up in the `build` folder.
             // When you `import` an asset, you get its filename.
             // This loader doesn't use a "test" so it will catch all modules
@@ -235,7 +272,7 @@ module.exports = function(entryFile, context) {
       // Generates an `index.html` file with the <script> injected.
       new HtmlWebpackPlugin({
         inject: true,
-        template: paths.appHtml,
+        template: htmlTemplate,
         minify: {
           removeComments: true,
           collapseWhitespace: true,
@@ -274,6 +311,10 @@ module.exports = function(entryFile, context) {
           ascii_only: true,
         },
         sourceMap: shouldUseSourceMap,
+      }),
+      // Note: this won't work without ExtractTextPlugin.extract(..) in `loaders`.
+      new ExtractTextPlugin({
+        filename: cssFilename,
       }),
       // Generate a manifest file which contains a mapping of all asset filenames
       // to their corresponding output file so that tools can pick it up without

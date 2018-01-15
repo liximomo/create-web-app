@@ -223,6 +223,9 @@ module.exports = (entryFile, context) => {
                           ],
                         },
                       },
+                      {
+                        loader: require.resolve('sass-loader'),
+                      },
                     ],
                   },
                   extractTextPluginOptions

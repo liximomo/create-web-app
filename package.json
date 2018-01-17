@@ -1,4 +1,7 @@
 {
+  "scripts": {
+    "publish:prerelease": "lerna publish --cd-version=prerelease"
+  },
 	"devDependencies": {
 		"lerna": "^2.6.0"
 	}

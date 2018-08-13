@@ -1,10 +1,17 @@
 {
   "name": "@webapp/scripts",
-  "version": "0.0.1-alpha.1",
+  "version": "0.0.0",
   "author": "liximomo",
   "license": "MIT",
   "engines": {
     "node": ">=8"
+  },
+  "files": [
+    "bin",
+    "scripts"
+  ],
+  "bin": {
+    "webapp-scripts": "./bin/webapp-scripts.js"
   },
   "publishConfig": {
     "access": "public"

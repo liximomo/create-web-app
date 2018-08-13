@@ -1,0 +1,16 @@
+{
+  "name": "@webapp/scripts",
+  "version": "0.0.1-alpha.1",
+  "author": "liximomo",
+  "license": "MIT",
+  "engines": {
+    "node": ">=8"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "chalk": "^2.4.1",
+    "cross-spawn": "^6.0.5"
+  }
+}

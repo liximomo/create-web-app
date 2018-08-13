@@ -1,4 +1,5 @@
 {
+  "private": true,
   "scripts": {
     "publish:prerelease": "lerna publish --cd-version=prerelease"
   },

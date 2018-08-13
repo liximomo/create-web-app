@@ -1,0 +1,12 @@
+{
+  "name": "@webapp/dev-utils",
+  "version": "0.0.1-alpha.1",
+  "author": "liximomo",
+  "license": "MIT",
+  "engines": {
+    "node": ">=8"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

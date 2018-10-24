@@ -1,7 +1,11 @@
 {
   "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
-    "publish:prerelease": "lerna publish --cd-version=prerelease"
+    "publish:prerelease": "lerna publish --cd-version=prerelease",
+    "start": "cd packages/fea-scripts && node bin/fea-scripts.js start"
   },
 	"devDependencies": {
 		"lerna": "^2.6.0"

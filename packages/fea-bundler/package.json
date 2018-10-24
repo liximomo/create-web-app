@@ -1,0 +1,10 @@
+{
+  "name": "@fea/bundler",
+  "version": "1.0.0",
+  "main": "index.js",
+  "author": "liximomo",
+  "license": "MIT",
+  "files": [
+    "index.js"
+  ]
+}

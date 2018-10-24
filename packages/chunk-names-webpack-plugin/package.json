@@ -1,0 +1,13 @@
+{
+  "name": "@fea/chunk-names-webpack-plugin",
+  "version": "1.0.0",
+  "main": "index.js",
+  "author": "liximomo",
+  "license": "MIT",
+  "files": [
+    "index.js"
+  ],
+  "peerDependencies": {
+    "webpack": "^4.1.0"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "name": "@fea/webpack-entry-resolver",
+  "version": "1.0.0",
+  "main": "index.js",
+  "author": "liximomo",
+  "license": "MIT",
+  "engines": {
+    "node": ">=8"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "minimist": "^1.2.0"
+  }
+}

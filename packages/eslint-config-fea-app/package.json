@@ -1,0 +1,17 @@
+{
+  "name": "@fea/eslint-config-fea-app",
+  "version": "1.0.0",
+  "main": "index.js",
+  "author": "liximomo",
+  "license": "MIT",
+  "files": [
+    "index.js"
+  ],
+  "dependencies": {
+    "@fea/eslint-config-react": "^1.0.0",
+    "@fea/eslint-config-vue": "^1.0.0"
+  },
+  "peerDependencies": {
+    "eslint": "5.x"
+  }
+}

@@ -22,7 +22,7 @@ const InterpolateHtmlPlugin = require('react-dev-utils/InterpolateHtmlPlugin');
 const WorkboxWebpackPlugin = require('workbox-webpack-plugin');
 const ModuleScopePlugin = require('react-dev-utils/ModuleScopePlugin');
 const getCSSModuleLocalIdent = require('react-dev-utils/getCSSModuleLocalIdent');
-const VueLoaderPlugin = require('vue-loader/lib/plugin')
+const VueLoaderPlugin = require('vue-loader/lib/plugin');
 const paths = require('./paths');
 const getClientEnvironment = require('./env');
 const ModuleNotFoundPlugin = require('react-dev-utils/ModuleNotFoundPlugin');
@@ -108,11 +108,28 @@ const getStyleLoaders = (cssOptions, preProcessor) => {
   return loaders;
 };
 
+const getOutput = name => {
+  const mainFilename = `static/${name}/js/bundle.js`;
+
+  return {
+    mainFilename,
+    filename(chunkData) {
+      return chunkData.chunk.name === name ? mainFilename : `static/${name}/js/[name].js`;
+    },
+    chunkFilename: `static/${name}/js/[name].[chunkhash:8].chunk.js`,
+    cssFilename: `static/${name}/css/[name].css`,
+    cssChunkFilename: `static/${name}/css/[name].[contenthash:8].chunk.css`,
+    mediaFilename: `static/${name}/media/[name].[hash:8].[ext]`,
+    manifestFilename: `${name}/asset-manifest.json`,
+  };
+};
+
 // This is the production configuration.
 // It compiles slowly and is focused on producing a fast and minimal bundle.
 // The development configuration is different and lives in a separate file.
 module.exports = function(entryConfig) {
   const name = entryConfig.name;
+  const output = getOutput(name);
   return {
     mode: 'production',
     // Don't attempt to continue if there are any errors.
@@ -130,12 +147,8 @@ module.exports = function(entryConfig) {
       // Generated JS file names (with nested folders).
       // There will be one main bundle, and one file per asynchronous chunk.
       // We don't currently advertise code splitting but Webpack supports it.
-      filename(chunkData) {
-        return chunkData.chunk.name === name
-          ? `${name}/static/js/bundle.js`
-          : `${name}/static/js/[name].js`;
-      },
-      chunkFilename: `${name}/static/js/[name].[chunkhash:8].chunk.js`,
+      filename: output.filename,
+      chunkFilename: output.chunkFilename,
       // We inferred the "public path" (such as / or /my-project) from homepage.
       publicPath: publicPath,
       // Point sourcemap entries to original disk location (format as URL on Windows)
@@ -306,7 +319,7 @@ module.exports = function(entryConfig) {
               loader: require.resolve('url-loader'),
               options: {
                 limit: 10000,
-                name: `${name}/static/media/[name].[hash:8].[ext]`,
+                name: output.mediaFilename,
               },
             },
             // Process application JS with Babel.
@@ -456,7 +469,7 @@ module.exports = function(entryConfig) {
               // by webpacks internal loaders.
               exclude: [/\.(js|mjs|jsx)$/, /\.vue$/, /\.html$/, /\.json$/],
               options: {
-                name: `${name}/static/media/[name].[hash:8].[ext]`,
+                name: output.mediaFilename,
               },
             },
             // ** STOP ** Are you adding a new loader?
@@ -507,7 +520,7 @@ module.exports = function(entryConfig) {
       // to their corresponding output file so that tools can pick it up without
       // having to parse `index.html`.
       new ManifestPlugin({
-        fileName: `${name}/asset-manifest.json`,
+        fileName: output.manifestFilename,
         publicPath: publicPath,
       }),
       // Moment.js is an extremely popular library that bundles large locale files
@@ -533,8 +546,8 @@ module.exports = function(entryConfig) {
       }),
       new chunkNamesPlugin({
         'mini-css-extract-plugin': {
-          filename: `${name}/static/css/[name].css`,
-          chunkFilename: `${name}/static/css/[name].[contenthash:8].chunk.css`,
+          filename: output.cssFilename,
+          chunkFilename: output.cssChunkFilename,
         },
       }),
     ].filter(Boolean),

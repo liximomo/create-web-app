@@ -17,7 +17,7 @@ const InterpolateHtmlPlugin = require('react-dev-utils/InterpolateHtmlPlugin');
 const WatchMissingNodeModulesPlugin = require('react-dev-utils/WatchMissingNodeModulesPlugin');
 const ModuleScopePlugin = require('react-dev-utils/ModuleScopePlugin');
 const getCSSModuleLocalIdent = require('react-dev-utils/getCSSModuleLocalIdent');
-const VueLoaderPlugin = require('vue-loader/lib/plugin')
+const VueLoaderPlugin = require('vue-loader/lib/plugin');
 const getClientEnvironment = require('./env');
 const paths = require('./paths');
 const ManifestPlugin = require('webpack-manifest-plugin');
@@ -76,11 +76,24 @@ const getStyleLoaders = (cssOptions, preProcessor) => {
   return loaders;
 };
 
+const getOutput = name => {
+  const mainFilename = `static/${name}/js/bundle.js`;
+  return {
+    mainFilename,
+    filename(chunkData) {
+      return chunkData.chunk.name === name ? mainFilename : `static/${name}/js/[name].js`;
+    },
+    chunkFilename: `static/${name}/js/[name].[chunkhash:8].chunk.js`,
+    mediaFilename: `static/${name}/media/[name].[hash:8].[ext]`,
+    manifestFilename: `${name}/asset-manifest.json`,
+  };
+};
 // This is the development configuration.
 // It is focused on developer experience and fast rebuilds.
 // The production configuration is different and lives in a separate file.
 module.exports = function(entryConfig) {
   const name = entryConfig.name;
+  const output = getOutput(name);
   return {
     name,
 
@@ -102,8 +115,7 @@ module.exports = function(entryConfig) {
         // the line below with these two lines if you prefer the stock client:
         // require.resolve('webpack-dev-server/client') + '?/',
         // require.resolve('webpack/hot/dev-server'),
-        require.resolve('fea-dev-utils/webpackHotDevClient') +
-          `?filename=/${name}/static/js/bundle.js`,
+        require.resolve('fea-dev-utils/webpackHotDevClient') + `?filename=/${output.mainFilename}`,
         // Finally, this is your app's code:
         entryConfig.entryPath,
         // We include the app code last so that if there is a runtime error during
@@ -117,13 +129,9 @@ module.exports = function(entryConfig) {
       // This does not produce a real file. It's just the virtual path that is
       // served by WebpackDevServer in development. This is the JS bundle
       // containing code from all our entry points, and the Webpack runtime.
-      filename(chunkData) {
-        return chunkData.chunk.name === name
-          ? `${name}/static/js/bundle.js`
-          : `${name}/static/js/[name].js`;
-      },
+      filename: output.filename,
       // There are also additional JS chunk files if you use code splitting.
-      chunkFilename: `${name}/static/js/[name].[chunkhash:8].chunk.js`,
+      chunkFilename: output.chunkFilename,
       // This is the URL that app is served from. We use "/" in development.
       publicPath: publicPath,
       // Point sourcemap entries to original disk location (format as URL on Windows)
@@ -236,7 +244,7 @@ module.exports = function(entryConfig) {
               loader: require.resolve('url-loader'),
               options: {
                 limit: 10000,
-                name: `${name}/static/media/[name].[hash:8].[ext]`,
+                name: output.mediaFilename,
               },
             },
             // Process application JS with Babel.
@@ -371,7 +379,7 @@ module.exports = function(entryConfig) {
               exclude: [/\.(js|mjs|jsx)$/, /\.vue$/, /\.html$/, /\.json$/],
               loader: require.resolve('file-loader'),
               options: {
-                name: `${name}/static/media/[name].[hash:8].[ext]`,
+                name: output.mediaFilename,
               },
             },
           ],
@@ -420,7 +428,7 @@ module.exports = function(entryConfig) {
       // to their corresponding output file so that tools can pick it up without
       // having to parse `index.html`.
       new ManifestPlugin({
-        fileName: `${name}/asset-manifest.json`,
+        fileName: output.manifestFilename,
         publicPath: publicPath,
       }),
       // force entryChunk to use output.filename instead of output.chunkName

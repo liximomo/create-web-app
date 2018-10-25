@@ -17,6 +17,7 @@ const InterpolateHtmlPlugin = require('react-dev-utils/InterpolateHtmlPlugin');
 const WatchMissingNodeModulesPlugin = require('react-dev-utils/WatchMissingNodeModulesPlugin');
 const ModuleScopePlugin = require('react-dev-utils/ModuleScopePlugin');
 const getCSSModuleLocalIdent = require('react-dev-utils/getCSSModuleLocalIdent');
+const VueLoaderPlugin = require('vue-loader/lib/plugin')
 const getClientEnvironment = require('./env');
 const paths = require('./paths');
 const ManifestPlugin = require('webpack-manifest-plugin');
@@ -158,7 +159,7 @@ module.exports = function(entryConfig) {
       // https://github.com/facebook/create-react-app/issues/290
       // `web` extension prefixes have been added for better support
       // for React Native Web.
-      extensions: ['.mjs', '.web.js', '.js', '.json', '.web.jsx', '.jsx'],
+      extensions: ['.mjs', '.web.js', '.js', '.json', '.web.jsx', '.jsx', '.vue'],
       alias: {
         // Support React Native Web
         // https://www.smashingmagazine.com/2016/08/a-glimpse-into-the-future-with-react-native-for-web/
@@ -208,6 +209,19 @@ module.exports = function(entryConfig) {
             },
           ],
           include: paths.appSrc,
+        },
+        {
+          test: /\.vue$/,
+          include: paths.appSrc,
+          loader: require.resolve('vue-loader'),
+          options: {
+            transformToRequire: {
+              video: ['src', 'poster'],
+              source: 'src',
+              img: 'src',
+              image: 'xlink:href',
+            },
+          },
         },
         {
           // "oneOf" will traverse all following loaders until one will
@@ -354,7 +368,7 @@ module.exports = function(entryConfig) {
               // its runtime that would otherwise be processed through "file" loader.
               // Also exclude `html` and `json` extensions so they get processed
               // by webpacks internal loaders.
-              exclude: [/\.(js|mjs|jsx)$/, /\.html$/, /\.json$/],
+              exclude: [/\.(js|mjs|jsx)$/, /\.vue$/, /\.html$/, /\.json$/],
               loader: require.resolve('file-loader'),
               options: {
                 name: `${name}/static/media/[name].[hash:8].[ext]`,
@@ -367,6 +381,7 @@ module.exports = function(entryConfig) {
       ],
     },
     plugins: [
+      new VueLoaderPlugin(),
       // Generates an `index.html` file with the <script> injected.
       new HtmlWebpackPlugin({
         inject: true,

@@ -3,7 +3,7 @@ class ChunkNamesPlugin {
    * Creates an instance of ChunkNamesPlugin.
    *
    * @type
-   * @param {{ fileName: string; chunkFilename: string, [x: string]: { fileName: string; chunkFilename: string } }} [pluginOption={}]
+   * @param {{ filename: string; chunkFilename: string, [x: string]: { filename: string; chunkFilename: string } }} [pluginOption={}]
    * @memberof ChunkNamesPlugin
    */
   constructor(pluginOption = {}) {

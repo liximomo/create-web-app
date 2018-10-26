@@ -64,7 +64,7 @@ if (entryFiles === null) {
 const config = entryFiles.map(createWebpackConfig);
 const pageLinks = entryFiles.map(entry => ({
   name: entry.name,
-  url: '/' + entry.htmlOuputPath,
+  url: '/' + entry.scope + '/',
 }));
 
 // Tools like Cloud9 rely on this.

@@ -28,15 +28,17 @@ function makeEntryConfig(filePath, ctx) {
   };
 
   const pageBase = ctx.pageBase;
-  const pageDir = path.dirname(filePath);
+  const relativePath = path.relative(pageBase, filePath);
+  const scope = path.dirname(relativePath).replace(path.sep, '~');
+  const pageDir = path.dirname(relativePath);
   const dirname = path.basename(pageDir);
   const filename = path.basename(filePath).replace(/\..*$/g, '');
   const name = filename !== 'index' ? filename : dirname;
-  const relativePath = path.relative(pageBase, pageDir);
-  const outputName = relativePath.replace(path.sep, '/');
+  // const outputName = dirname.replace(path.sep, '/');
   entryConfig.name = name;
-  entryConfig.htmlTemplatePath = path.join(pageDir, 'index.html');
-  entryConfig.htmlOuputPath = `${outputName}/index.html`;
+  entryConfig.htmlTemplatePath = path.resolve(filePath, '../index.html');
+  entryConfig.relativePath = relativePath;
+  entryConfig.scope = scope;
 
   return entryConfig;
 }

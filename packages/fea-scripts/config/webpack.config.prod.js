@@ -107,19 +107,21 @@ const getStyleLoaders = (cssOptions, preProcessor) => {
   return loaders;
 };
 
-const getOutput = name => {
-  const mainFilename = `static/${name}/js/bundle.js`;
-
+const getOutput = entryConfig => {
+  const name = entryConfig.name;
+  const scope = entryConfig.scope;
+  const mainFilename = `static/${scope}/js/bundle.js`;
   return {
     mainFilename,
     filename(chunkData) {
       return chunkData.chunk.name === name ? mainFilename : `static/${name}/js/[name].js`;
     },
-    chunkFilename: `static/${name}/js/[name].[chunkhash:8].chunk.js`,
-    cssFilename: `static/${name}/css/[name].css`,
-    cssChunkFilename: `static/${name}/css/[name].[contenthash:8].chunk.css`,
-    mediaFilename: `static/${name}/media/[name].[hash:8].[ext]`,
-    manifestFilename: `${name}/asset-manifest.json`,
+    chunkFilename: `static/${scope}/js/[name].[chunkhash:8].chunk.js`,
+    cssFilename: `static/${scope}/css/[name].css`,
+    cssChunkFilename: `static/${scope}/css/[name].[contenthash:8].chunk.css`,
+    mediaFilename: `static/${scope}/media/[name].[hash:8].[ext]`,
+    manifestFilename: `${scope}/asset-manifest.json`,
+    htmlFilename: `${scope}/index.html`,
   };
 };
 
@@ -127,8 +129,7 @@ const getOutput = name => {
 // It compiles slowly and is focused on producing a fast and minimal bundle.
 // The development configuration is different and lives in a separate file.
 module.exports = function(entryConfig) {
-  const name = entryConfig.name;
-  const output = getOutput(name);
+  const output = getOutput(entryConfig);
   return {
     mode: 'production',
     // Don't attempt to continue if there are any errors.
@@ -137,9 +138,7 @@ module.exports = function(entryConfig) {
     // You can exclude the *.map files from the build during deployment.
     devtool: shouldUseSourceMap ? 'source-map' : false,
     // In production, we only want to load the app code.
-    entry: {
-      [entryConfig.name]: [entryConfig.entryPath],
-    },
+    entry: [entryConfig.entryPath],
     output: {
       // The build folder.
       path: paths.appBuild,
@@ -483,7 +482,7 @@ module.exports = function(entryConfig) {
       new HtmlWebpackPlugin({
         inject: true,
         template: entryConfig.htmlTemplatePath,
-        filename: entryConfig.htmlOuputPath,
+        filename: output.htmlFilename,
         minify: {
           removeComments: true,
           collapseWhitespace: true,

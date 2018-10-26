@@ -89,7 +89,7 @@ module.exports = function(proxy, allowedHost, pageLinks) {
       // See https://github.com/facebook/create-react-app/issues/387.
       disableDotRule: true,
       rewrites: pageLinks.map(page => ({
-        from: new RegExp(`^/${page.name}/`),
+        from: new RegExp(`^${page.url}`),
         to: page.url,
       })),
     },

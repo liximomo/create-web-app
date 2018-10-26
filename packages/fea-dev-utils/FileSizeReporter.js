@@ -44,23 +44,16 @@ function printFileSizesAfterBuild(
           var previousSize = sizes[removeFileNameHash(root, asset.name)];
           var difference = getDifferenceLabel(size, previousSize);
           return {
-            folder: path.join(
-              path.basename(buildFolder),
-              path.dirname(asset.name)
-            ),
+            folder: path.join(path.basename(buildFolder), path.dirname(asset.name)),
             name: path.basename(asset.name),
             size: size,
-            sizeLabel:
-              filesize(size) + (difference ? ' (' + difference + ')' : ''),
+            sizeLabel: filesize(size) + (difference ? ' (' + difference + ')' : ''),
           };
         })
     )
     .reduce((single, all) => all.concat(single), []);
   assets.sort((a, b) => b.size - a.size);
-  var longestSizeLabelLength = Math.max.apply(
-    null,
-    assets.map(a => stripAnsi(a.sizeLabel).length)
-  );
+  var longestSizeLabelLength = Math.max.apply(null, assets.map(a => stripAnsi(a.sizeLabel).length));
   var suggestBundleSplitting = false;
   assets.forEach(asset => {
     var sizeLabel = asset.sizeLabel;
@@ -70,9 +63,7 @@ function printFileSizesAfterBuild(
       sizeLabel += rightPadding;
     }
     var isMainBundle = asset.name.indexOf('main.') === 0;
-    var maxRecommendedSize = isMainBundle
-      ? maxBundleGzipSize
-      : maxChunkGzipSize;
+    var maxRecommendedSize = isMainBundle ? maxBundleGzipSize : maxChunkGzipSize;
     var isLarge = maxRecommendedSize && asset.size > maxRecommendedSize;
     if (isLarge && path.extname(asset.name) === '.js') {
       suggestBundleSplitting = true;
@@ -87,18 +78,10 @@ function printFileSizesAfterBuild(
   });
   if (suggestBundleSplitting) {
     console.log();
+    console.log(chalk.yellow('The bundle size is significantly larger than recommended.'));
+    console.log(chalk.yellow('Consider reducing it with code splitting: https://goo.gl/9VhYWB'));
     console.log(
-      chalk.yellow('The bundle size is significantly larger than recommended.')
-    );
-    console.log(
-      chalk.yellow(
-        'Consider reducing it with code splitting: https://goo.gl/9VhYWB'
-      )
-    );
-    console.log(
-      chalk.yellow(
-        'You can also analyze the project dependencies: https://goo.gl/LeUzfb'
-      )
+      chalk.yellow('You can also analyze the project dependencies: https://goo.gl/LeUzfb')
     );
   }
 }
@@ -107,10 +90,7 @@ function removeFileNameHash(buildFolder, fileName) {
   return fileName
     .replace(buildFolder, '')
     .replace(/\\/g, '/')
-    .replace(
-      /\/?(.*)(\.[0-9a-f]+)(\.chunk)?(\.js|\.css)/,
-      (match, p1, p2, p3, p4) => p1 + p4
-    );
+    .replace(/\/?(.*)(\.[0-9a-f]+)(\.chunk)?(\.js|\.css)/, (match, p1, p2, p3, p4) => p1 + p4);
 }
 
 // Input: 1024, 2048
@@ -130,17 +110,24 @@ function getDifferenceLabel(currentSize, previousSize) {
   }
 }
 
-function measureFileSizesBeforeBuild(buildFolder) {
+function measureFileSizesBeforeBuild(buildFolder, filter) {
   return new Promise(resolve => {
     recursive(buildFolder, (err, fileNames) => {
       var sizes;
       if (!err && fileNames) {
-        sizes = fileNames.filter(canReadAsset).reduce((memo, fileName) => {
-          var contents = fs.readFileSync(fileName);
-          var key = removeFileNameHash(buildFolder, fileName);
-          memo[key] = gzipSize(contents);
-          return memo;
-        }, {});
+        sizes = fileNames
+          .filter(filename => {
+            if (filter) {
+              return filter(filename) && canReadAsset(filename);
+            }
+            return canReadAsset(filename);
+          })
+          .reduce((memo, fileName) => {
+            var contents = fs.readFileSync(fileName);
+            var key = removeFileNameHash(buildFolder, fileName);
+            memo[key] = gzipSize(contents);
+            return memo;
+          }, {});
       }
       resolve({
         root: buildFolder,

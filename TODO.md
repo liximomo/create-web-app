@@ -1,8 +1,6 @@
 打包 lib
 打包 scss
 
-实现 packages/fea-dev-utils/FileSizeReporter.js 只统计当次打包的文件
-
 // 支持 ie9
 import 'react-app-polyfill/ie9'; // For IE 9-11 support
 
